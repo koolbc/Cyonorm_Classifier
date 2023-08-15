@@ -1,0 +1,71 @@
+```{r}
+#Set the Ram you would like to use for BART.
+options(java.parameters = "-Xmx75g")
+library(bartMachine)
+library(caTools)
+set.seed(123)
+```
+
+```{r}
+#Import the input matrices.
+cytonorm <- read.csv("C:/Users/melod/Desktop/RongRong/Dry/Classifier/Chenhsuan/flow_data/cell.dat.cytonorm.csv" , header = TRUE)
+```
+
+```{r}
+#Chnage the groups into 0 and 1.
+cytonorm$Group <- ifelse(cytonorm$Group == "health", 0, 1)
+```
+
+```{r}
+write.csv(cytonorm, file = "C:/Users/melod/Desktop/RongRong/Dry/Classifier/Chenhsuan/flow_data/cell.dat.cytonorm_0_1.csv")
+```
+
+```{r}
+#Set X as the features,Y as the target.
+X = cytonorm[, -ncol(cytonorm)]
+Y = cytonorm$Group
+```
+
+```{r}
+#Set 70% as training set and the other 30% as the testing set.
+split = sample.split(Y, SplitRatio = 0.7)
+X_train = X[split, ]
+Y_train = Y[split]
+X_test = X[!split, ]
+Y_test = Y[!split]
+```
+
+```{r}
+#Use 10 cores to run the bartMachine.
+set_bart_machine_num_cores(10)  
+bart_machine = bartMachine(X_train, Y_train)
+```
+
+```{r}
+#Predict the testing set.
+predictions = predict(bart_machine, X_test)
+```
+
+```{r}
+# Compute variable importance
+var_importance <- investigate_var_importance(bart_machine , num_replicates_for_avg = 1 , num_trees_bottleneck = 5)
+```
+
+```{r}
+#Sort the value importance based on their gini importance.
+avg_var_importance <- var_importance$avg_var_props
+avg_var_importance_df <- as.data.frame(avg_var_importance )
+avg_var_importance_df$feature <- rownames(avg_var_importance_df)
+names(avg_var_importance_df) <- c("importance", "feature")
+avg_var_importance_df_sorted <- avg_var_importance_df[order(avg_var_importance_df$importance, decreasing = TRUE), ]
+features <- avg_var_importance_df_sorted[1:32, ]
+```
+
+```{r}
+#Output as the csv file and then use python to do the visualization.
+write.csv(features , file = "F:/cytonorm/FEATURES.csv" , row.names = T)
+write.csv(Y_test, file = "F:/cytonorm/Y_test.csv")
+write.csv(predictions, file = "F:/cytonorm/predictions.csv")
+```
+
+
